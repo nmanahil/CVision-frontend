@@ -252,18 +252,42 @@ function TypingIndicator({ theme }) {
   )
 }
 
-function BotBubble({ text, children, theme }) {
+function SkeletonBubble({ theme }) {
   return (
     <div className="flex items-end gap-2 animate-bubble">
+      <div className="w-8 h-8 rounded-full flex-shrink-0 mb-1" style={{ background: theme.accentSoft }} />
+      <div className="space-y-2">
+        <div className="h-4 w-48 rounded-full shimmer" style={{ background: theme.panelAlt }} />
+        <div className="h-4 w-32 rounded-full shimmer" style={{ background: theme.panelAlt }} />
+      </div>
+    </div>
+  )
+}
+
+function BotBubble({ text, children, theme }) {
+  const [reactions, setReactions] = useState({})
+  const toggle = (e) => setReactions(r => ({ ...r, [e]: (r[e] || 0) + 1 }))
+  return (
+    <div className="flex items-end gap-2 animate-bubble bubble-wrap group">
       <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 mb-1 shadow-sm" style={{ background: theme.accent, color: "#fff" }}>
         {theme.avatar}
       </div>
-      <div
-        className="max-w-xs md:max-w-md lg:max-w-lg rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed"
-        style={{ background: theme.botBubble, color: theme.botText, border: `1px solid ${theme.inputBorder}` }}
-      >
-        {text && <span style={{ whiteSpace: "pre-line" }}>{text}</span>}
-        {children}
+      <div className="relative">
+        <div
+          className="max-w-xs md:max-w-md lg:max-w-lg rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed"
+          style={{ background: theme.botBubble, color: theme.botText, border: `1px solid ${theme.inputBorder}` }}
+        >
+          {text && <span style={{ whiteSpace: "pre-line" }}>{text}</span>}
+          {children}
+        </div>
+        <div className="bubble-reactions items-center gap-1 mt-1 ml-1">
+          {["👍","❤️","💀"].map(e => (
+            <button key={e} onClick={() => toggle(e)}
+              className="text-xs px-1.5 py-0.5 rounded-full transition-transform hover:scale-125"
+              style={{ background: theme.panelAlt, border: `1px solid ${theme.inputBorder}` }}
+            >{e}{reactions[e] ? ` ${reactions[e]}` : ""}</button>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -623,13 +647,16 @@ export default function Chat({ theme: selectedTheme = "pookie", onChangeTheme })
               <circle cx="36" cy="36" r={radius} fill="none" stroke={theme.accentSoft} strokeWidth="7" />
               <circle cx="36" cy="36" r={radius} fill="none" stroke={col} strokeWidth="7"
                 strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-                transform="rotate(-90 36 36)" style={{ transition: "stroke-dasharray 1s ease" }} />
+                transform="rotate(-90 36 36)" className="animate-ring" />
               <text x="36" y="41" textAnchor="middle" fontSize="14" fontWeight="bold" fill={col}>{pct}</text>
             </svg>
-            <div>
+            <div className="flex-1">
               <p className="text-sm font-bold" style={{ color: theme.title }}>CV Score</p>
               <p className="text-xs" style={{ color: theme.subtitle }}>{s.word_count} words · {s.skill_count} skills · {s.sections_found.length} sections</p>
               {s.has_quantified_achievements && <p className="text-xs" style={{ color: theme.successText }}>✅ quantified achievements</p>}
+              <div className="mt-2 h-1.5 rounded-full overflow-hidden" style={{ background: theme.accentSoft }}>
+                <div className="h-full rounded-full animate-progress" style={{ width: `${pct}%`, background: col }} />
+              </div>
             </div>
           </div>
           {s.tips.length > 0 && (
@@ -648,7 +675,11 @@ export default function Chat({ theme: selectedTheme = "pookie", onChangeTheme })
     if (extra.type === "skills") {
       return (
         <div className="mt-2">
-          {extra.skills.map((s, i) => <Badge key={i} text={s} color="blue" theme={theme} />)}
+          {extra.skills.map((s, i) => (
+            <span key={i} className="inline-block px-2 py-0.5 rounded-full text-xs font-medium mr-1 mb-1 animate-skill-pop"
+              style={{ animationDelay: `${i * 60}ms`, background: theme.infoBg, color: theme.infoText, border: `1px solid ${theme.infoBorder}` }}
+            >{s}</span>
+          ))}
         </div>
       )
     }
@@ -936,7 +967,9 @@ export default function Chat({ theme: selectedTheme = "pookie", onChangeTheme })
             </div>
             <div className="flex-1">
               <p className="text-sm font-bold" style={{ color: theme.title }}>CVision</p>
-              <p className="text-xs" style={{ color: theme.status }}>{theme.statusText}</p>
+              <p className="text-xs" style={{ color: theme.status }}>
+                {userName ? `chatting with ${userName} 👋` : theme.statusText}
+              </p>
             </div>
             <div className="flex items-center gap-2">
               {hasUploadedCv && (
@@ -971,14 +1004,7 @@ export default function Chat({ theme: selectedTheme = "pookie", onChangeTheme })
                 : <UserBubble key={i} text={msg.text} theme={theme} />
             )}
 
-            {isTyping && (
-              <div className="flex items-end gap-2 animate-bubble">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 shadow-sm" style={{ background: theme.accent, color: "#fff" }}>
-                  {theme.avatar}
-                </div>
-                <TypingIndicator theme={theme} />
-              </div>
-            )}
+            {isTyping && <SkeletonBubble theme={theme} />}
 
             {step !== "name" && (
               <div className="rounded-2xl px-4 py-3 text-xs space-y-1" style={{ background: theme.panel, border: `1px solid ${theme.inputBorder}`, color: theme.subtitle }}>
